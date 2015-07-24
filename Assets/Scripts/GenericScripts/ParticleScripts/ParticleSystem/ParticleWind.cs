@@ -2,15 +2,17 @@ using UnityEngine;
 using System.Collections;
 using System.Linq;
 
-[ExecuteInEditMode]
 public class ParticleWind : MonoBehaviour {
 	[SerializeField] public LocalForce[] localForces;
+
+	bool hasParticles = false;
 
 	PlaceFallingParticles placeFallingParticles;
 	ParticleSystem partiSystem;
 	ParticleSystem.Particle[] ps;
 
 	public bool getParentTarget = false;
+	public bool getParentEmission = false;
 	public ParticleWind parentWind;
 
 	public float uniqueWeight = 1.0f;
@@ -28,22 +30,29 @@ public class ParticleWind : MonoBehaviour {
 	public Vector3 peakPoint = Vector3.zero;
 	public Vector3 midPoint = Vector3.zero;
 
+	~ParticleWind()
+	{
+		Debug.Log ("Destroying particle wind");
+		ps = null;
+	}
+
 	// Use this for initialization
 	void Awake () {
 		if (partiSystem == null)
 			partiSystem = this.GetComponent<ParticleSystem> ();
-		if (placeFallingParticles == null)
-			placeFallingParticles = this.GetComponent<PlaceFallingParticles> ();
-		if (placeFallingParticles != null)
-			setPeakPoint = true;
+		hasParticles = (partiSystem != null);
 
-		if (getParentTarget) {
+		if (placeFallingParticles == null && placeFallingParticles)
+			placeFallingParticles = this.GetComponent<PlaceFallingParticles> ();
+		if (placeFallingParticles == null)
+			setPeakPoint = false;
+
+		if (getParentTarget && this.transform.parent != null) {
 			parentWind = this.transform.parent.GetComponentInParent<ParticleWind>();
 		}
 		if (parentWind == null) {
 			getParentTarget = false;
 		}
-
 		ps = new ParticleSystem.Particle[0];
 
 		windTarget = Random.insideUnitSphere;
@@ -64,10 +73,11 @@ public class ParticleWind : MonoBehaviour {
 
 
 		
-		if (partiSystem == null || ps == null)
+		if (!hasParticles)
 			return;
-
-		midPoint = Vector3.zero;
+		
+		if (setPeakPoint)
+			midPoint = Vector3.zero;
 
 		if(ps.Length != partiSystem.maxParticles)
 			ps = new ParticleSystem.Particle[partiSystem.maxParticles];
@@ -103,8 +113,6 @@ public class ParticleWind : MonoBehaviour {
 					midPoint.y += prtclPos.z;
 					midPoint.z += prtclPos.y;
 				}
-
-
 			
 
 				for (int j = 0; j < localForces.Length; j++) {
@@ -147,6 +155,8 @@ public class ParticleWind : MonoBehaviour {
 			wind = parentWind.wind;
 			localForces = parentWind.localForces;
 			windStartHeight = parentWind.windStartHeight;
+			if(getParentEmission)
+				partiSystem.emissionRate = parentWind.partiSystem.emissionRate;
 			return;
 		}
 
